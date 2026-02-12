@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Antara Tanya dan Rasa</title>
+
+<style>
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:radial-gradient(circle at top,#1e3c72,#000);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  color:white;
+}
+.card{
+  width:95%;
+  max-width:420px;
+  background:rgba(0,0,0,0.65);
+  padding:20px;
+  border-radius:24px;
+  text-align:center;
+  box-shadow:0 0 40px rgba(255,255,255,0.1);
+}
+input,button{
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  border:none;
+  margin:6px 0;
+  font-size:16px;
+}
+.spinBtn{
+  background:linear-gradient(135deg,#00c6ff,#0072ff);
+  color:white;
+  font-size:18px;
+}
+.skipBtn{
+  background:linear-gradient(135deg,#f7971e,#ffd200);
+  color:#000;
+  font-size:18px;
+}
+button:active{transform:scale(0.96);}
+
+#wheel{
+  width:180px;
+  height:180px;
+  border-radius:50%;
+  border:10px solid #fbc531;
+  margin:15px auto;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:24px;
+  font-weight:bold;
+  box-shadow:0 0 25px #fbc531;
+  transition:transform 2.5s cubic-bezier(.05,.9,.2,1),
+             font-size .3s;
+}
+
+.spinGlow{
+  box-shadow:0 0 60px #ff4757;
+  font-size:32px;
+}
+
+#turn{font-size:18px;}
+
+#question{
+  margin-top:20px;
+  font-size:20px;
+  min-height:100px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+#punish{
+  font-size:14px;
+  color:#fbc531;
+  margin-top:6px;
+}
+
+.hide{display:none;}
+.row{display:flex;gap:10px;}
+.row button{width:50%;}
+</style>
+</head>
+<body>
+
+<audio id="spinSound">
+  <source src="https://www.soundjay.com/misc/sounds/clock-ticking-5.mp3">
+</audio>
+
+<div class="card" id="setup">
+  <h2>Antara Tanya dan Rasa ⭐</h2>
+  <input id="p1" placeholder="Nama Pemain 1">
+  <input id="p2" placeholder="Nama Pemain 2">
+  <button class="spinBtn" onclick="start()">Mulai</button>
+</div>
+
+<div class="card hide" id="game">
+  <div id="turn"></div>
+  <div id="wheel">?</div>
+
+  <div class="row">
+    <button class="spinBtn" onclick="spin()">SPIN</button>
+    <button class="skipBtn" onclick="skip()">SKIP</button>
+  </div>
+
+  <div id="question"></div>
+  <div id="punish"></div>
+</div>
+
+<script>
+let players=[],turn=0,rotation=0;
+
+let questions=[
+"Hal apa yang paling bikin kamu bahagia belakangan ini?",
+"Kalau punya satu hari bebas, kamu mau ngapain?",
+"Makanan favorit yang nggak pernah bikin bosan?",
+"Hal kecil yang bisa bikin mood kamu naik?",
+"Lebih suka ngobrol langsung atau chat?",
+"Kalau lagi capek, biasanya kamu butuh apa?",
+"Kebiasaan aneh tapi kamu nikmati?",
+"Hal paling random yang pernah kamu lakukan?",
+"Liburan impian ke mana?",
+"Skill apa yang ingin kamu kuasai?",
+"Hal yang paling sering kamu tunda?",
+"Apa arti bahagia menurutmu?",
+"Hal apa yang paling sering kamu pikirkan sebelum tidur?",
+"Kapan terakhir kali kamu merasa benar-benar bahagia?",
+"Apa hal kecil yang sebenarnya sangat berarti buatmu?",
+"Hal yang paling kamu syukuri sekarang?",
+"Lebih suka kejutan atau direncanakan?",
+"Hal kecil yang bikin kamu nyaman sama orang?",
+"Siapa orang yang paling kamu takuti kehilangannya?",
+"Apa hal yang belum pernah kamu ceritakan ke siapa pun?",
+"Kalau bisa kembali ke satu momen, momen apa itu?",
+"Hal apa tentang dirimu yang jarang orang tahu?",
+"Kebiasaan pagi favoritmu?",
+"Paling sering overthinking soal apa?",
+"Hal yang ingin kamu ubah dari dirimu?",
+"Hal yang paling bikin kamu ketawa?",
+"Momen kecil tapi berkesan?",
+"Hal yang bikin kamu merasa dihargai?",
+"Apa yang paling kamu sesali sampai sekarang?",
+"Apa yang paling kamu syukuri hari ini?",
+"Menurutmu, kamu sedang bahagia atau hanya terbiasa?",
+"Kalau bisa ke mana saja sekarang?",
+"Makanan yang pengen kamu makan sekarang?",
+"Lebih pilih uang atau waktu?",
+"Hal yang bikin kamu malas?",
+"Hal yang bikin kamu semangat?",
+"Kalau bisa belajar satu hal instan, apa?",
+"Apa yang bikin kamu betah ngobrol lama?",
+"Hal sederhana yang bikin hidup lebih enak?",
+"Kalau cuaca mendung, biasanya ngapain?",
+"Pernah jatuh cinta diam-diam?",
+"Lebih sakit ditinggal atau tidak pernah diperjuangkan?",
+"Siapa orang yang paling mempengaruhi hidupmu?",
+"Pernah pura-pura kuat padahal capek?",
+"Lebih suka spontan atau terencana?",
+"Apa definisi sukses buatmu?",
+"Hal yang paling sering kamu pikirkan?",
+"Kalau stres, cara ngatasinya?",
+"Hal kecil yang bikin kamu tersenyum?",
+"Hal yang ingin kamu pertahankan dari dirimu?",
+"Hal yang ingin kamu tinggalkan?",
+"Satu kebiasaan baik yang ingin kamu mulai?",
+"Hal yang bikin kamu merasa dicintai?",
+"Lebih takut kehilangan atau lebih takut sendirian?",
+"Siapa yang ingin kamu hubungi sekarang tapi tidak bisa?",
+"Apa yang membuatmu merasa tidak cukup?",
+"Apa yang bikin kamu jatuh hati pada seseorang?",
+"Hal sederhana yang bikin kamu bahagia?",
+"Apa yang kamu cari dalam hubungan?",
+"Hal yang bikin kamu insecure?",
+"Apa arti komitmen menurutmu?",
+"Hal kecil yang bikin kamu nyaman sama pasangan?",
+"Apa yang paling kamu takutkan soal masa depan?",
+"Kalau bisa ulang satu momen, momen apa?",
+"Hal yang bikin kamu bangga pada dirimu?",
+"Apa yang bikin kamu betah sama seseorang?",
+"Hal yang paling bikin kamu merasa hidup?",
+"Hal yang bikin kamu sulit move on?",
+"Hal yang bikin kamu merasa aman?",
+"Apa arti rumah menurutmu?",
+"Hal yang bikin kamu percaya sama orang?",
+"Kalau lagi sedih, pengen diapain?",
+"Apa yang bikin kamu ngerasa berarti?",
+"Hal yang bikin kamu takut kehilangan?",
+"Kalau harus jujur, hal apa yang paling kamu inginkan sekarang?",
+"Pernah menunggu seseorang yang tidak pasti?",
+"Kamu tipe yang mudah baper atau pura-pura tidak peduli?",
+"Lebih sakit jujur atau berbohong demi menjaga?"
+];
+
+let skipPunish=[
+"Jawab pertanyaan berikutnya lebih jujur",
+"Sebutkan satu hal positif tentang lawan main",
+"Ceritakan satu hal lucu tentang dirimu",
+"Senyum 10 detik",
+"Katakan 'aku siap jujur'",
+"Tarik napas dalam 3 kali",
+"Senyum 5 detik",
+"Ucapkan terima kasih",
+"Sebutkan satu hal yang kamu hargai dari hidup",
+"Tatap layar 5 detik",
+"Ucapkan satu kalimat motivasi",
+"Sebutkan satu hal yang kamu sukai dari dirimu",
+"Ceritakan satu kenangan kecil",
+"Tersenyum tanpa alasan",
+"Minum air",
+"Stretch tangan",
+"Ucapkan satu doa singkat",
+"Sebutkan satu mimpi",
+"Sebutkan satu hal yang ingin kamu lepaskan",
+"Sebutkan satu hal yang ingin kamu jaga",
+"Tertawa 5 detik"
+];
+
+function start(){
+  players=[p1.value,p2.value];
+  if(!players[0]||!players[1]) return alert("Isi dua nama dulu");
+  setup.classList.add("hide");
+  game.classList.remove("hide");
+  updateTurn();
+}
+
+function updateTurn(){
+  document.getElementById("turn").innerText="Giliran: "+players[turn];
+  document.getElementById("wheel").innerText = players[turn];
+}
+
+function spin(){
+  let wheel=document.getElementById("wheel");
+  let q=document.getElementById("question");
+  let p=document.getElementById("punish");
+  let sound=document.getElementById("spinSound");
+
+  document.getElementById("turn").innerText =
+    players[turn]+" sedang spin...";
+
+  q.innerText=""; p.innerText="";
+  sound.currentTime=0; sound.play();
+  wheel.classList.add("spinGlow");
+
+  rotation += Math.floor(Math.random()*360) + 1440;
+  wheel.style.transform =
+    `rotate(${rotation}deg) scale(1.1)`;
+
+  setTimeout(()=>{
+    sound.pause();
+    wheel.classList.remove("spinGlow");
+    wheel.style.transform =
+      `rotate(${rotation}deg) scale(1)`;
+
+    q.innerText =
+      questions[Math.floor(Math.random()*questions.length)];
+
+    turn=(turn+1)%2;
+    updateTurn();
+  },2500);
+}
+
+function skip(){
+  punish.innerText =
+    "Hukuman skip: "+
+    skipPunish[Math.floor(Math.random()*skipPunish.length)];
+}
+</script>
+</body>
+</html>
