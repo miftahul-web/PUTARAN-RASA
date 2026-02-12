@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Antara Tanya dan Rasa</title>
+
+<style>
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:radial-gradient(circle at top,#1e3c72,#000);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  color:white;
+}
+.card{
+  width:95%;
+  max-width:430px;
+  background:rgba(0,0,0,0.65);
+  padding:20px;
+  border-radius:24px;
+  text-align:center;
+  box-shadow:0 0 40px rgba(255,255,255,0.15);
+}
+.header{
+  font-size:22px;
+  font-weight:bold;
+  margin-bottom:10px;
+}
+.subheader{
+  font-size:14px;
+  color:#ccc;
+  margin-bottom:15px;
+}
+input,button{
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  border:none;
+  margin:6px 0;
+  font-size:16px;
+}
+.spinBtn{background:linear-gradient(135deg,#00c6ff,#0072ff);color:white;}
+.stopBtn{background:linear-gradient(135deg,#ff4757,#e84118);color:white;}
+.skipBtn{background:linear-gradient(135deg,#f7971e,#ffd200);color:#000;}
+button:active{transform:scale(0.96);}
+
+#wheel{
+  width:200px;height:200px;border-radius:50%;
+  border:10px solid #fbc531;
+  margin:15px auto;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:20px;
+  font-weight:bold;
+  box-shadow:0 0 30px #fbc531;
+  overflow:hidden;
+  position:relative;
+}
+
+#wheel span{
+  position:absolute;
+  width:100%;
+  text-align:center;
+}
+
+.spinAnim{
+  animation: spin 0.6s linear infinite;
+  box-shadow:0 0 70px #ff4757;
+}
+
+@keyframes spin{
+  from{transform:rotate(0deg);}
+  to{transform:rotate(360deg);}
+}
+
+.hide{display:none;}
+.row{display:flex;gap:10px;}
+.row button{width:50%;}
+</style>
+</head>
+<body>
+
+<div class="card" id="setup">
+  <div class="header">Antara Tanya dan Rasa ⭐</div>
+  <div class="subheader">Masukkan jumlah dan nama pemain</div>
+
+  <input id="playerCount" type="number" min="2" placeholder="Jumlah pemain">
+  <div id="playerInputs"></div>
+  <button class="spinBtn" onclick="generateInputs()">Buat Input Nama</button>
+  <button class="spinBtn" onclick="start()">Mulai Game</button>
+</div>
+
+<div class="card hide" id="game">
+  <div class="header">Antara Tanya dan Rasa ⭐</div>
+  <div class="subheader" id="turn"></div>
+
+  <div id="wheel"><span>?</span></div>
+
+  <div class="row">
+    <button class="spinBtn" onclick="spin()">SPIN</button>
+    <button class="stopBtn" onclick="stopSpin()">STOP</button>
+  </div>
+
+  <button class="skipBtn" onclick="skip()">SKIP</button>
+
+  <div id="question" style="margin-top:15px;font-size:18px;white-space:pre-line;"></div>
+  <div id="punish" style="color:#fbc531;margin-top:6px;"></div>
+</div>
+
+<script>
+let players=[];
+let currentAsker=0;
+let spinning=false;
+let spinInterval;
+let selectedPlayer="";
+
+let questions=[ /* dipersingkat di sini demi tampilan */
+"Hal apa yang paling bikin kamu bahagia belakangan ini?",
+"Apa yang paling kamu takutkan soal masa depan?",
+"Kalau harus jujur, siapa orang yang paling kamu rindukan?",
+"Pernah menyesal karena terlalu baik?",
+"Lebih takut ditinggal atau meninggalkan?",
+"Apa luka emosional terbesarmu?",
+"Apa arti cinta menurutmu sekarang?",
+"Siapa orang yang paling mempengaruhi hidupmu?",
+"Apa yang belum kamu maafkan sampai sekarang?",
+"Apa mimpi yang belum berani kamu kejar?",
+"Hal yang bikin kamu insecure?",
+"Apa yang membuatmu merasa tidak cukup?",
+"Apa kebiasaan buruk yang ingin kamu hentikan?",
+"Apa arti rumah buatmu?",
+"Siapa orang yang ingin kamu hubungi sekarang?",
+"Apa yang bikin kamu merasa dicintai?",
+"Hal yang paling kamu syukuri hari ini?",
+"Pernah pura-pura bahagia?",
+"Hal yang ingin kamu lepaskan?",
+"Apa yang bikin kamu sulit move on?",
+"Apa arti sukses menurutmu?",
+"Kalau hidup tinggal 1 tahun lagi, apa yang kamu lakukan?",
+"Apa ketakutan terbesarmu?",
+"Apa yang membuatmu merasa hidup?",
+"Apa arti komitmen buatmu?",
+"Apa yang kamu cari dalam hubungan?",
+"Lebih takut gagal atau tidak pernah mencoba?",
+"Apa rahasia kecilmu?",
+"Apa hal yang bikin kamu bangga pada dirimu?",
+"Apa yang bikin kamu merasa aman?",
+"Apa definisi bahagia versi kamu?",
+"Siapa orang yang paling kamu takut kehilangan?",
+"Apa hal kecil yang bikin kamu tersenyum?",
+"Apa momen paling berkesan dalam hidupmu?",
+"Apa yang ingin kamu ubah dari dirimu?",
+"Apa hal yang ingin kamu pertahankan?",
+"Apa kebiasaan pagi favoritmu?",
+"Apa hal yang sering kamu overthinking-kan?",
+"Apa hal yang bikin kamu merasa berarti?",
+"Apa yang bikin kamu jatuh hati?",
+"Apa luka terbesarmu dalam cinta?",
+"Apa arti setia menurutmu?",
+"Apa yang paling kamu butuhkan sekarang?",
+"Apa yang bikin kamu betah sama seseorang?",
+"Apa yang paling kamu sesali?",
+"Apa hal yang paling kamu hargai dari hidup?",
+"Apa arti keluarga buatmu?",
+"Apa hal yang bikin kamu takut sendirian?",
+"Apa yang bikin kamu sulit percaya orang?",
+"Apa yang ingin kamu dengar dari seseorang?",
+"Apa hal yang bikin kamu merasa tidak terlihat?",
+"Apa yang bikin kamu merasa dipilih?",
+"Apa arti bahagia dalam satu kata?",
+"Apa hal yang ingin kamu mulai dari nol?",
+"Apa yang paling kamu takuti kehilangan?",
+"Apa hal kecil yang sebenarnya besar artinya?",
+"Apa yang membuatmu merasa cukup?",
+"Apa yang bikin kamu ingin menyerah?",
+"Apa yang bikin kamu ingin bertahan?",
+"Apa arti jujur menurutmu?",
+"Apa hal yang ingin kamu katakan ke dirimu di masa lalu?",
+"Apa hal yang ingin kamu katakan ke dirimu di masa depan?"
+];
+
+/* ===== 50+ HUKUMAN ===== */
+let skipPunish=[
+"Senyum 10 detik",
+"Sebutkan 3 hal yang kamu syukuri",
+"Ceritakan satu kenangan lucu",
+"Ucapkan satu doa singkat",
+"Sebutkan satu mimpi terbesarmu",
+"Tatap layar tanpa berkedip 5 detik",
+"Sebutkan satu hal yang kamu sukai dari dirimu",
+"Tersenyum tanpa alasan",
+"Katakan 'aku siap jujur'",
+"Minum air",
+"Tarik napas dalam 3 kali",
+"Stretch tangan",
+"Sebutkan satu orang yang kamu hargai",
+"Ucapkan terima kasih pada semua pemain",
+"Sebutkan satu hal yang ingin kamu lepaskan",
+"Sebutkan satu ketakutan",
+"Tertawa 5 detik",
+"Sebutkan satu tujuan hidup",
+"Sebutkan satu hal yang bikin kamu bahagia",
+"Ucapkan satu kalimat motivasi",
+"Sebutkan satu hal yang ingin kamu jaga",
+"Sebutkan satu hal yang membuatmu bangga",
+"Sebutkan satu hal yang membuatmu kuat",
+"Sebutkan satu hal yang membuatmu rapuh",
+"Sebutkan satu kebiasaan baik"
+];
+
+function generateInputs(){
+  let n = playerCount.value;
+  if(n<2) return alert("Minimal 2 pemain");
+  let html="";
+  for(let i=1;i<=n;i++){
+    html+=`<input class="pname" placeholder="Nama pemain ${i}">`;
+  }
+  playerInputs.innerHTML=html;
+}
+
+function start(){
+  let inputs=document.querySelectorAll(".pname");
+  players=[];
+  inputs.forEach(i=>{ if(i.value) players.push(i.value); });
+  if(players.length<2) return alert("Isi semua nama");
+  setup.classList.add("hide");
+  game.classList.remove("hide");
+  currentAsker = 0;
+  updateTurn();
+}
+
+function updateTurn(){
+  turn.innerText = "Giliran bertanya: "+players[currentAsker];
+  wheel.querySelector("span").innerText = "?";
+}
+
+function spin(){
+  if(spinning) return;
+  spinning=true;
+  question.innerText="";
+  punish.innerText="";
+  wheel.classList.add("spinAnim");
+
+  spinInterval=setInterval(()=>{
+    selectedPlayer =
+      players[Math.floor(Math.random()*players.length)];
+    wheel.querySelector("span").innerText = selectedPlayer;
+  },70);
+}
+
+function stopSpin(){
+  if(!spinning) return;
+  spinning=false;
+  clearInterval(spinInterval);
+  wheel.classList.remove("spinAnim");
+
+  let asker = players[currentAsker];
+  let answerer = selectedPlayer;
+
+  if(answerer === asker){
+    spin();
+    return;
+  }
+
+  question.innerText =
+    asker+" bertanya ke "+answerer+" 👇\n\n"+
+    questions[Math.floor(Math.random()*questions.length)];
+
+  currentAsker = players.indexOf(answerer);
+  updateTurn();
+}
+
+function skip(){
+  punish.innerText =
+    "Hukuman skip: "+
+    skipPunish[Math.floor(Math.random()*skipPunish.length)];
+}
+</script>
+</body>
+</html>
